@@ -1,0 +1,15 @@
+#define CONFIG_WIFI_SSID "WIFI_AP"
+#define CONFIG_WIFI_PASSWORD "PASSWORD"
+#define CONFIG_MQTT_ADDR "192.168.1.1"
+#define CONFIG_MQTT_PORT 1883
+
+#define MQTT_STATE_TOPIC "state"
+#define MQTT_COMMAND_TOPIC "cmd"
+#define MQTT_CONFIG_TOPIC "homeassistant/light/bed/config"
+#define MQTT_STATUS_TOPIC "bedlight/rgbw/status"
+
+#define MQTT_USERNAME "bedlight"
+#define MQTT_PASSWORD ""
+
+#define BTN_PIN D1
+#define LED_PIN D7
