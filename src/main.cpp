@@ -87,6 +87,7 @@ const int debounceDelay = 50;
 void onChange() {
   // Get the pin reading.
   int reading = digitalRead(BTN_PIN);
+  Serial.println(reading);
 
   // Ignore dupe readings.
   if(reading == stateb) return;
@@ -111,7 +112,7 @@ void onChange() {
   Serial.println("button: " + String(reading));
   if(stateb) {
     state = !state;
-    brightness = 255;
+    brightness = state ? 255 : 0;
     updated = true;
   }
 }
@@ -170,4 +171,7 @@ return;*/
     updated = false;
     update();
   }
+
+  int reading = digitalRead(BTN_PIN);
+  Serial.println(reading);
 }
