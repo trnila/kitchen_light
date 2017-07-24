@@ -28,7 +28,7 @@ long map(long x, long in_min, long in_max, long out_min, long out_max) {
 void mqtt_publish(const char* topic, const JsonObject &object) {
   object.printTo(jsonBuffer, sizeof(jsonBuffer));
   Serial.println(jsonBuffer);
-  if(!mqttClient.publish(MQTT_STATE_TOPIC, jsonBuffer, true)) {
+  if(!mqttClient.publish(topic, jsonBuffer, true)) {
     Serial.println("publish failed");
     Serial.println(mqttClient.state());
   }
@@ -52,7 +52,6 @@ void update() {
 void mqttcallback(const char *topic, byte* payload, unsigned int length) {
   Serial.println(topic);
   payload[length] = 0;
-  //Serial.println(payload);
 
   StaticJsonBuffer<256> jsonBuffer_;
   JsonObject& root = jsonBuffer_.parseObject(payload);
