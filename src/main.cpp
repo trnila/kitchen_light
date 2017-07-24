@@ -1,41 +1,51 @@
 #include <Arduino.h>
-#include "config.h"
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
-
-#define BTN_PIN D1
+#include "config.h"
 
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 char jsonBuffer[256];
 bool updated = false;
 
-long map(long x, long in_min, long in_max, long out_min, long out_max)
-{
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
 int brightness = 1023;
 bool state = true;
 
+// Holds the current button state.
+volatile int stateb;
+
+// Holds the last time debounce was evaluated (in millis).
+volatile long lastDebounceTime = 0;
+
+// The delay threshold for debounce checking.
+const int debounceDelay = 50;
+
+long map(long x, long in_min, long in_max, long out_min, long out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+void mqtt_publish(const char* topic, const JsonObject &object) {
+  object.printTo(jsonBuffer, sizeof(jsonBuffer));
+  Serial.println(jsonBuffer);
+  if(!mqttClient.publish(MQTT_STATE_TOPIC, jsonBuffer, true)) {
+    Serial.println("publish failed");
+    Serial.println(mqttClient.state());
+  }
+}
+
 void update() {
   if(state) {
-    analogWrite(D7, map(brightness, 0, 255, 0, 1023));
+    analogWrite(LED_PIN, map(brightness, 0, 255, 0, 1023));
   } else {
-    analogWrite(D7, 0);
+    analogWrite(LED_PIN, 0);
   }
 
   StaticJsonBuffer<256> res;
   JsonObject& rroot = res.createObject();
   rroot["state"] = state ? "ON" : "OFF";
   rroot["brightness"] = brightness;
-  rroot.printTo(jsonBuffer, sizeof(jsonBuffer));
-  Serial.println(jsonBuffer);
-  if(!mqttClient.publish(MQTT_STATE_TOPIC, jsonBuffer, true)) {
-    Serial.println("publish failed");
-    Serial.println(mqttClient.state());
-  }
+  mqtt_publish(MQTT_STATE_TOPIC, rroot);
 }
 
 
@@ -60,7 +70,7 @@ void mqttcallback(const char *topic, byte* payload, unsigned int length) {
   updated = true;
 }
 
-void bgn() {
+void register_device() {
   StaticJsonBuffer<256> staticJsonBuffer;
   JsonObject& root = staticJsonBuffer.createObject();
   root["name"] = "BedLight";
@@ -68,26 +78,13 @@ void bgn() {
   root["state_topic"] = MQTT_STATE_TOPIC;
   root["command_topic"] = MQTT_COMMAND_TOPIC;
   root["brightness"] = true;
-  root.printTo(jsonBuffer, sizeof(jsonBuffer));
-  if(!mqttClient.publish(MQTT_CONFIG_TOPIC, jsonBuffer)) {
-    Serial.println("publish failed");
-    Serial.println(mqttClient.state());
-  }
+  mqtt_publish(MQTT_CONFIG_TOPIC, root);
 }
-// Holds the current button state.
-volatile int stateb;
-
-// Holds the last time debounce was evaluated (in millis).
-volatile long lastDebounceTime = 0;
-
-// The delay threshold for debounce checking.
-const int debounceDelay = 50;
 
 // Gets called by the interrupt.
 void onChange() {
   // Get the pin reading.
   int reading = digitalRead(BTN_PIN);
-  Serial.println(reading);
 
   // Ignore dupe readings.
   if(reading == stateb) return;
@@ -107,9 +104,6 @@ void onChange() {
 
   // All is good, persist the reading as the state.
   stateb = reading;
-
-  // Work with the value now.
-  Serial.println("button: " + String(reading));
   if(stateb) {
     state = !state;
     brightness = state ? 255 : 0;
@@ -131,38 +125,20 @@ void setup() {
   mqttClient.setServer(CONFIG_MQTT_ADDR, CONFIG_MQTT_PORT);
   mqttClient.setCallback(mqttcallback);
 
-  pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(D7, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
   pinMode(BTN_PIN, INPUT);
   attachInterrupt(BTN_PIN, onChange, CHANGE);
-  //attachInterrupt(BTN_PIN, toggle, CHANGE);
-  Serial.println("Completed");
+  Serial.println("Initialized");
 }
 
 void loop() {
-/*for(int i = 0; i < 1023; i++) {
-  analogWrite(D7, i);
-  delay(1);
-}
-return;*/
-
-/*  digitalWrite(D7, LOW);
-  delay(1000);
-  digitalWrite(D7, HIGH);
-  delay(1000);
-  return;*/
-
-
-  //toggle();
-  //return;
-
   if(!mqttClient.connected()) {
     Serial.println("reconnecting");
     if(!mqttClient.connect("bedlight", MQTT_USERNAME, MQTT_PASSWORD, MQTT_STATUS_TOPIC, 0, 1, "dead")) {
       Serial.println("mqtt failed");
     }
     mqttClient.subscribe(MQTT_COMMAND_TOPIC);
-    bgn();
+    register_device();
   }
 
   mqttClient.loop();
@@ -171,7 +147,4 @@ return;*/
     updated = false;
     update();
   }
-
-  int reading = digitalRead(BTN_PIN);
-  Serial.println(reading);
 }
