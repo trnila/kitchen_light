@@ -72,7 +72,7 @@ void mqttcallback(const char *topic, byte* payload, unsigned int length) {
 void register_device() {
   StaticJsonBuffer<256> staticJsonBuffer;
   JsonObject& root = staticJsonBuffer.createObject();
-  root["name"] = "BedLight";
+  root["name"] = DEVICE_NAME;
   root["platform"] = "mqtt_json";
   root["state_topic"] = MQTT_STATE_TOPIC;
   root["command_topic"] = MQTT_COMMAND_TOPIC;
@@ -133,7 +133,7 @@ void setup() {
 void loop() {
   if(!mqttClient.connected()) {
     Serial.println("reconnecting");
-    if(!mqttClient.connect("bedlight", MQTT_USERNAME, MQTT_PASSWORD, MQTT_STATUS_TOPIC, 0, 1, "dead")) {
+    if(!mqttClient.connect(DEVICE_NAME, MQTT_USERNAME, MQTT_PASSWORD, MQTT_STATUS_TOPIC, 0, 1, "dead")) {
       Serial.println("mqtt failed");
       delay(1000);
       return;

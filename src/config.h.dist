@@ -8,7 +8,9 @@
 #define MQTT_CONFIG_TOPIC "homeassistant/light/bed/config"
 #define MQTT_STATUS_TOPIC "bedlight/rgbw/status"
 
-#define MQTT_USERNAME "bedlight"
+#define DEVICE_NAME "my-light"
+
+#define MQTT_USERNAME DEVICE_NAME
 #define MQTT_PASSWORD ""
 
 #define BTN_PIN D1
