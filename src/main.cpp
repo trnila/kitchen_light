@@ -135,6 +135,8 @@ void loop() {
     Serial.println("reconnecting");
     if(!mqttClient.connect("bedlight", MQTT_USERNAME, MQTT_PASSWORD, MQTT_STATUS_TOPIC, 0, 1, "dead")) {
       Serial.println("mqtt failed");
+      delay(1000);
+      return;
     }
     mqttClient.subscribe(MQTT_COMMAND_TOPIC);
     register_device();
