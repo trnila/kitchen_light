@@ -8,8 +8,9 @@ WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 char jsonBuffer[256];
 bool updated = false;
+bool pirChanged = false;
 
-int brightness = 1023;
+int brightness = 255;
 bool state = true;
 
 // Holds the current button state.
@@ -27,6 +28,7 @@ long map(long x, long in_min, long in_max, long out_min, long out_max) {
 
 void mqtt_publish(const char* topic, const JsonObject &object) {
   object.printTo(jsonBuffer, sizeof(jsonBuffer));
+  Serial.print("SEND: ");
   Serial.println(jsonBuffer);
   if(!mqttClient.publish(topic, jsonBuffer, true)) {
     Serial.println("publish failed");
@@ -70,16 +72,14 @@ void mqttcallback(const char *topic, byte* payload, unsigned int length) {
 }
 
 void register_device() {
-  {
-    StaticJsonBuffer<256> staticJsonBuffer;
-    JsonObject& root = staticJsonBuffer.createObject();
-    root["name"] = DEVICE_NAME;
-    root["platform"] = "mqtt_json";
-    root["state_topic"] = MQTT_STATE_TOPIC;
-    root["command_topic"] = MQTT_COMMAND_TOPIC;
-    root["brightness"] = true;
-    mqtt_publish(MQTT_CONFIG_TOPIC, root);
-  }
+  StaticJsonBuffer<256> staticJsonBuffer;
+  JsonObject& root = staticJsonBuffer.createObject();
+  root["name"] = DEVICE_NAME;
+  root["platform"] = "mqtt_json";
+  root["state_topic"] = MQTT_STATE_TOPIC;
+  root["command_topic"] = MQTT_COMMAND_TOPIC;
+  root["brightness"] = true;
+  mqtt_publish(MQTT_CONFIG_TOPIC, root);
 }
 
 // Gets called by the interrupt.
@@ -112,6 +112,10 @@ void onChange() {
   }
 }
 
+void pirChange() {
+  pirChanged = true;
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -129,10 +133,10 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   pinMode(BTN_PIN, INPUT);
   attachInterrupt(BTN_PIN, onChange, CHANGE);
+  attachInterrupt(PIR_PIN, pirChange, RISING);
   Serial.println("Initialized");
 }
 
-int last_pir = 0;
 void loop() {
   if(!mqttClient.connected()) {
     Serial.println("reconnecting");
@@ -145,19 +149,19 @@ void loop() {
     register_device();
   }
 
-  int cur_pir = digitalRead(PIR_PIN);
-  if(cur_pir != last_pir) {
+  if (pirChanged) {
     StaticJsonBuffer<256> staticJsonBuffer;
     JsonObject& root = staticJsonBuffer.createObject();
     root["id"] = "kitchen";
     root["distance"] = 1;
     mqtt_publish(MQTT_PRESENCE_TOPIC, root);
-    last_pir = cur_pir;
     Serial.println("pir trigger");
 
-    state = 1;
-    brightness = 255;
-    updated = true;
+//    state = 1;
+//    brightness = 255;
+//    updated = true;
+
+    pirChanged = false;
   }
 
   mqttClient.loop();
