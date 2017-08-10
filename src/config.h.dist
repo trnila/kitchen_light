@@ -13,5 +13,5 @@
 #define MQTT_USERNAME DEVICE_NAME
 #define MQTT_PASSWORD ""
 
-#define BTN_PIN D1
+#define BTN_PIN D6
 #define LED_PIN D7

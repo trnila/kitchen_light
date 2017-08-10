@@ -70,14 +70,16 @@ void mqttcallback(const char *topic, byte* payload, unsigned int length) {
 }
 
 void register_device() {
-  StaticJsonBuffer<256> staticJsonBuffer;
-  JsonObject& root = staticJsonBuffer.createObject();
-  root["name"] = DEVICE_NAME;
-  root["platform"] = "mqtt_json";
-  root["state_topic"] = MQTT_STATE_TOPIC;
-  root["command_topic"] = MQTT_COMMAND_TOPIC;
-  root["brightness"] = true;
-  mqtt_publish(MQTT_CONFIG_TOPIC, root);
+  {
+    StaticJsonBuffer<256> staticJsonBuffer;
+    JsonObject& root = staticJsonBuffer.createObject();
+    root["name"] = DEVICE_NAME;
+    root["platform"] = "mqtt_json";
+    root["state_topic"] = MQTT_STATE_TOPIC;
+    root["command_topic"] = MQTT_COMMAND_TOPIC;
+    root["brightness"] = true;
+    mqtt_publish(MQTT_CONFIG_TOPIC, root);
+  }
 }
 
 // Gets called by the interrupt.
@@ -130,6 +132,7 @@ void setup() {
   Serial.println("Initialized");
 }
 
+int last_pir = 0;
 void loop() {
   if(!mqttClient.connected()) {
     Serial.println("reconnecting");
@@ -140,6 +143,21 @@ void loop() {
     }
     mqttClient.subscribe(MQTT_COMMAND_TOPIC);
     register_device();
+  }
+
+  int cur_pir = digitalRead(PIR_PIN);
+  if(cur_pir != last_pir) {
+    StaticJsonBuffer<256> staticJsonBuffer;
+    JsonObject& root = staticJsonBuffer.createObject();
+    root["id"] = "kitchen";
+    root["distance"] = 1;
+    mqtt_publish(MQTT_PRESENCE_TOPIC, root);
+    last_pir = cur_pir;
+    Serial.println("pir trigger");
+
+    state = 1;
+    brightness = 255;
+    updated = true;
   }
 
   mqttClient.loop();
