@@ -114,11 +114,22 @@ void onChange() {
 
 void pirChange() {
   pirChanged = true;
+  Serial.println("p");
+}
+
+void reset() {
+  digitalWrite(LED_PIN, LOW);
 }
 
 void setup() {
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(BTN_PIN, INPUT);
+  reset();
+
   Serial.begin(115200);
 
+  WiFi.persistent(true);
+  WiFi.mode(WIFI_STA);
   WiFi.begin(CONFIG_WIFI_SSID, CONFIG_WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -130,8 +141,6 @@ void setup() {
   mqttClient.setServer(CONFIG_MQTT_ADDR, CONFIG_MQTT_PORT);
   mqttClient.setCallback(mqttcallback);
 
-  pinMode(LED_PIN, OUTPUT);
-  pinMode(BTN_PIN, INPUT);
   attachInterrupt(BTN_PIN, onChange, CHANGE);
   attachInterrupt(PIR_PIN, pirChange, RISING);
   Serial.println("Initialized");
@@ -145,6 +154,7 @@ void loop() {
       delay(1000);
       return;
     }
+    reset();
     mqttClient.subscribe(MQTT_COMMAND_TOPIC);
     register_device();
   }
@@ -156,10 +166,6 @@ void loop() {
     root["distance"] = 1;
     mqtt_publish(MQTT_PRESENCE_TOPIC, root);
     Serial.println("pir trigger");
-
-//    state = 1;
-//    brightness = 255;
-//    updated = true;
 
     pirChanged = false;
   }
