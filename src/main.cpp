@@ -13,15 +13,6 @@ bool pirChanged = false;
 int brightness = 255;
 bool state = true;
 
-// Holds the current button state.
-volatile int stateb;
-
-// Holds the last time debounce was evaluated (in millis).
-volatile long lastDebounceTime = 0;
-
-// The delay threshold for debounce checking.
-const int debounceDelay = 50;
-
 long map(long x, long in_min, long in_max, long out_min, long out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
@@ -82,36 +73,6 @@ void register_device() {
   mqtt_publish(MQTT_CONFIG_TOPIC, root);
 }
 
-// Gets called by the interrupt.
-void onChange() {
-  // Get the pin reading.
-  int reading = digitalRead(BTN_PIN);
-
-  // Ignore dupe readings.
-  if(reading == stateb) return;
-
-  boolean debounce = false;
-
-  // Check to see if the change is within a debounce delay threshold.
-  if((millis() - lastDebounceTime) <= debounceDelay) {
-    debounce = true;
-  }
-
-  // This update to the last debounce check is necessary regardless of debounce state.
-  lastDebounceTime = millis();
-
-  // Ignore reads within a debounce delay threshold.
-  if(debounce) return;
-
-  // All is good, persist the reading as the state.
-  stateb = reading;
-  if(stateb) {
-    state = !state;
-    brightness = state ? 255 : 0;
-    updated = true;
-  }
-}
-
 void pirChange() {
   pirChanged = true;
   Serial.println("p");
@@ -123,7 +84,6 @@ void reset() {
 
 void setup() {
   pinMode(LED_PIN, OUTPUT);
-  pinMode(BTN_PIN, INPUT);
   reset();
 
   Serial.begin(115200);
@@ -141,7 +101,6 @@ void setup() {
   mqttClient.setServer(CONFIG_MQTT_ADDR, CONFIG_MQTT_PORT);
   mqttClient.setCallback(mqttcallback);
 
-  attachInterrupt(BTN_PIN, onChange, CHANGE);
   attachInterrupt(PIR_PIN, pirChange, RISING);
   Serial.println("Initialized");
 }
