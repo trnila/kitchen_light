@@ -13,6 +13,8 @@ bool pirChanged = false;
 int brightness = 255;
 bool state = true;
 
+unsigned int lastTime;
+
 long map(long x, long in_min, long in_max, long out_min, long out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
@@ -116,6 +118,14 @@ void loop() {
     reset();
     mqttClient.subscribe(MQTT_COMMAND_TOPIC);
     register_device();
+  }
+
+  if(millis() - lastTime > 5000) {
+    lastTime = millis();
+
+    if(digitalRead(PIR_PIN)) {
+      pirChanged = true;
+    }
   }
 
   if (pirChanged) {
